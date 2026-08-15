@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import StockChart from "./components/StockChart";
 import AttentionPane from "./components/AttentionPane";
 import { fetchForecast } from "./api";
@@ -29,12 +29,21 @@ function App() {
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
   const [showTable, setShowTable] = useState(false);
+  const cache = useRef(new Map());
 
   async function runForecast(symbol, days) {
+    const key = `${symbol}-${days}`;
+    if (cache.current.has(key)) {
+      setData(cache.current.get(key));
+      setActiveSymbol(symbol);
+      setStatus("done");
+      return;
+    }
     setStatus("loading");
     setError("");
     try {
       const result = await fetchForecast(symbol, { historyDays: days });
+      cache.current.set(key, result);
       setData(result);
       setActiveSymbol(symbol);
       setStatus("done");
@@ -48,6 +57,7 @@ function App() {
     e.preventDefault();
     const symbol = symbolInput.trim();
     if (!symbol) return;
+    cache.current.clear();
     runForecast(symbol, historyDays);
   }
 
